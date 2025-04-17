@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Wordle Clone</title>
+  <style>
+    body {
+      font-family: 'Arial', sans-serif;
+      background-color: #121213;
+      color: #ffffff;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+      height: 100vh;
+      padding-top: 40px;
+     
+
+    }
+
+    h1 {
+      font-size: 2rem;
+      margin-bottom: 20px;
+    }
+
+    .board {
+      display: grid;
+      grid-template-rows: repeat(6, 1fr);
+      gap: 10px;
+    }
+
+    .row {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 10px;
+    }
+
+    .tile {
+      width: 60px;
+      height: 60px;
+      border: 2px solid #3a3a3c;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-transform: uppercase;
+      font-size: 2rem;
+      font-weight: bold;
+      background-color: #121213;
+      color: #ffffff;
+    }
+
+    .correct {
+      background-color: #538d4e !important;
+      border: none;
+    }
+
+    .present {
+      background-color: #b59f3b !important;
+      border: none;
+    }
+
+    .absent {
+      background-color: #3a3a3c !important;
+      border: none;
+    }
+
+    .keyboard {
+      display: grid;
+      grid-template-columns: repeat(10, 1fr);
+      gap: 8px;
+      margin-top: 30px;
+    }
+
+    .key {
+      padding: 10px;
+      background-color: #818384;
+      border: none;
+      border-radius: 4px;
+      color: white;
+      font-weight: bold;
+      font-size: 1rem;
+      cursor: pointer;
+      text-transform: uppercase;
+    }
+
+    .key.special {
+      grid-column: span 2;
+    }
+
+    .message {
+      margin-top: 15px;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+  <h1>Wordle Clone</h1>
+  <div class="board" id="board"></div>
+  <div class="keyboard" id="keyboard"></div>
+  <div class="message" id="message"></div>
+
+  <script>
+    const solution = "PLANT";
+    const board = document.getElementById("board");
+    const keyboard = document.getElementById("keyboard");
+    const messageDiv = document.getElementById("message");
+
+    let currentRow = 0;
+    let currentTile = 0;
+    let gameOver = false;
+    const guesses = [];
+
+    // Build board
+    for (let i = 0; i < 6; i++) {
+      const row = document.createElement("div");
+      row.classList.add("row");
+      for (let j = 0; j < 5; j++) {
+        const tile = document.createElement("div");
+        tile.classList.add("tile");
+        tile.setAttribute("id", `tile-${i}-${j}`);
+        row.appendChild(tile);
+      }
+      board.appendChild(row);
+    }
+
+    // Build keyboard
+    const keys = [
+      ..."QWERTYUIOP",
+      ..."ASDFGHJKL",
+      ..."ZXCVBNM"
+    ];
+
+    const specialKeys = ["Enter", "←"];
+    const allKeys = [...keys.slice(0, 10), ...keys.slice(10, 19), ...specialKeys.slice(0, 1), ...keys.slice(19), ...specialKeys.slice(1)];
+
+    allKeys.forEach(key => {
+      const btn = document.createElement("button");
+      btn.classList.add("key");
+      if (key === "Enter" || key === "←") btn.classList.add("special");
+      btn.textContent = key;
+      btn.addEventListener("click", () => handleKey(key));
+      keyboard.appendChild(btn);
+    });
+
+    function handleKey(key) {
+      if (gameOver) return;
+
+      if (key === "←") {
+        if (currentTile > 0) {
+          currentTile--;
+          const tile = document.getElementById(`tile-${currentRow}-${currentTile}`);
+          tile.textContent = "";
+        }
+      } else if (key === "Enter") {
+        if (currentTile === 5) {
+          const guess = [];
+          for (let i = 0; i < 5; i++) {
+            const tile = document.getElementById(`tile-${currentRow}-${i}`);
+            guess.push(tile.textContent);
+          }
+          checkGuess(guess.join(""));
+        }
+      } else if (currentTile < 5 && /^[A-Z]$/.test(key)) {
+        const tile = document.getElementById(`tile-${currentRow}-${currentTile}`);
+        tile.textContent = key;
+        currentTile++;
+      }
+    }
+
+    function checkGuess(guess) {
+      guess = guess.toUpperCase();
+      const guessArr = guess.split("");
+      const solutionArr = solution.split("");
+
+      for (let i = 0; i < 5; i++) {
+        const tile = document.getElementById(`tile-${currentRow}-${i}`);
+        if (guessArr[i] === solutionArr[i]) {
+          tile.classList.add("correct");
+          solutionArr[i] = null;
+          guessArr[i] = null;
+        }
+      }
+
+      for (let i = 0; i < 5; i++) {
+        const tile = document.getElementById(`tile-${currentRow}-${i}`);
+        if (guessArr[i] && solutionArr.includes(guessArr[i])) {
+          tile.classList.add("present");
+          solutionArr[solutionArr.indexOf(guessArr[i])] = null;
+        } else if (guessArr[i]) {
+          tile.classList.add("absent");
+        }
+      }
+
+      if (guess === solution) {
+        messageDiv.textContent = "You guessed it!";
+        gameOver = true;
+      } else if (currentRow === 5) {
+        messageDiv.textContent = `Game over! The word was ${solution}`;
+        gameOver = true;
+      } else {
+        currentRow++;
+        currentTile = 0;
+      }
+    }
+
+    // Optional: allow keyboard typing
+    document.addEventListener("keydown", e => {
+      const key = e.key.toUpperCase();
+      if (key === "BACKSPACE") handleKey("←");
+      else if (key === "ENTER") handleKey("Enter");
+      else if (/^[A-Z]$/.test(key)) handleKey(key);
+    });
+  </script>
+</body>
+<a href="index.html">Resume</a>
+<a href="scratch.html">Golf</a>
+</html>
